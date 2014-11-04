@@ -323,6 +323,9 @@ typedef long long mstime_t; /* millisecond time type. */
 /* Anti-warning macro... */
 #define REDIS_NOTUSED(V) ((void) V)
 
+#define SKIPLIST_MAXLEVEL 32 /* Should be enough for 2^32 elements */
+#define SKIPLIST_P 0.25      /* Skiplist P = 1/4 */
+
 #define ZSKIPLIST_MAXLEVEL 32 /* Should be enough for 2^32 elements */
 #define ZSKIPLIST_P 0.25      /* Skiplist P = 1/4 */
 
@@ -595,6 +598,27 @@ struct sharedObjectsStruct {
     *mbulkhdr[REDIS_SHARED_BULKHDR_LEN], /* "*<value>\r\n" */
     *bulkhdr[REDIS_SHARED_BULKHDR_LEN];  /* "$<value>\r\n" */
 };
+
+/* generalized version of a skiplist node */
+typedef struct slNode {
+    robj *obj;
+    robj *score;
+    struct slNode *backward;
+    struct skiplistLevel {
+        struct slNode *forward;
+    } level[];
+} slNode;
+
+typedef struct skiplist {
+    struct slNode *header, *tail;
+    unsigned long length;
+    int level;
+} skiplist;
+
+typedef struct {
+    robj *min, *max;  /* May be set to shared.(minstring|maxstring) */
+    int minex, maxex; /* are min or max exclusive? */
+} slrangespec;
 
 /* ZSETs use a specialized version of Skiplists */
 typedef struct zskiplistNode {
@@ -1148,6 +1172,7 @@ robj *createStringObjectFromLongLong(long long value);
 robj *createStringObjectFromLongDouble(long double value, int humanfriendly);
 robj *createQuicklistObject(void);
 robj *createZiplistObject(void);
+robj *createSkiplistObject(void);
 robj *createSetObject(void);
 robj *createIntsetObject(void);
 robj *createHashObject(void);
@@ -1227,6 +1252,11 @@ typedef struct {
     robj *min, *max;  /* May be set to shared.(minstring|maxstring) */
     int minex, maxex; /* are min or max exclusive? */
 } zlexrangespec;
+
+/* skiplist interface definition */
+skiplist *slCreate(void);
+void slFree(skiplist *sl);
+slNode *slInsert(skiplist *sl, robj *score, robj *obj);
 
 zskiplist *zslCreate(void);
 void zslFree(zskiplist *zsl);
@@ -1485,6 +1515,12 @@ void roleCommand(redisClient *c);
 void debugCommand(redisClient *c);
 void msetCommand(redisClient *c);
 void msetnxCommand(redisClient *c);
+void sladdCommand(redisClient *c);
+void slremCommand(redisClient *c);
+void slcardCommand(redisClient *c);
+void slsearchCommand(redisClient *c);
+void slallCommand(redisClient *c);
+void slrangeCommand(redisClient *c);
 void zaddCommand(redisClient *c);
 void zincrbyCommand(redisClient *c);
 void zrangeCommand(redisClient *c);

@@ -503,6 +503,12 @@ int rdbSaveObjectType(rio *rdb, robj *o) {
     case REDIS_LIST:
         if (o->encoding == REDIS_ENCODING_QUICKLIST)
             return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST_QUICKLIST);
+        else if (o->encoding == REDIS_ENCODING_ZIPLIST)
+            return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST_ZIPLIST);
+        else if (o->encoding == REDIS_ENCODING_LINKEDLIST)
+            return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST);
+        else if (o->encoding == REDIS_ENCODING_SKIPLIST)
+        	return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST_SKIPLIST);
         else
             redisPanic("Unknown list encoding");
     case REDIS_SET:
@@ -569,6 +575,32 @@ ssize_t rdbSaveObject(rio *rdb, robj *o) {
                     nwritten += n;
                 }
             } while ((node = node->next));
+//            if ((n = rdbSaveLen(rdb,listLength(list))) == -1) return -1;
+//            nwritten += n;
+//
+//            listRewind(list,&li);
+//            while((ln = listNext(&li))) {
+//                robj *eleobj = listNodeValue(ln);
+//                if ((n = rdbSaveStringObject(rdb,eleobj)) == -1) return -1;
+//                nwritten += n;
+//            }
+        } else if (o->encoding == REDIS_ENCODING_SKIPLIST) {
+            skiplist *sl = o->ptr;
+            slNode *x = sl->header->level[0].forward;
+
+            if ((n = rdbSaveLen(rdb, sl->length)) == -1) return -1;
+            nwritten += n;
+
+            while(x) {
+                robj *scoreobj = x->score;
+                robj *eleobj = x->obj;
+
+                if ((n = rdbSaveStringObject(rdb,scoreobj)) == -1) return -1;
+                nwritten += n;
+                if ((n = rdbSaveStringObject(rdb,eleobj)) == -1) return -1;
+                nwritten += n;
+                x = x->level[0].forward;
+            }
         } else {
             redisPanic("Unknown list encoding");
         }
@@ -1030,6 +1062,20 @@ robj *rdbLoadObject(int rdbtype, rio *rdb) {
         if (zsetLength(o) <= server.zset_max_ziplist_entries &&
             maxelelen <= server.zset_max_ziplist_value)
                 zsetConvert(o,REDIS_ENCODING_ZIPLIST);
+    } else if (rdbtype == REDIS_RDB_TYPE_LIST_SKIPLIST) {
+        size_t sllen;
+        if ((sllen = rdbLoadLen(rdb, NULL)) == REDIS_RDB_LENERR) return NULL;
+        o = createSkiplistObject();
+        skiplist *sl = o->ptr;
+
+        while(sllen--) {
+            robj *scoreobj, *eleobj;
+            if ((scoreobj = rdbLoadStringObject(rdb)) == NULL) return NULL;
+            scoreobj = tryObjectEncoding(scoreobj);
+            if ((eleobj = rdbLoadStringObject(rdb)) == NULL) return NULL;
+            eleobj = tryObjectEncoding(eleobj);
+            slInsert(sl, scoreobj, eleobj);
+        }
     } else if (rdbtype == REDIS_RDB_TYPE_HASH) {
         size_t len;
         int ret;

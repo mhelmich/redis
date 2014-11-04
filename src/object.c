@@ -194,6 +194,14 @@ robj *createZiplistObject(void) {
     return o;
 }
 
+robj *createSkiplistObject(void) {
+	robj *o;
+	skiplist *sl = slCreate();
+	o = createObject(REDIS_LIST, sl);
+	o->encoding = REDIS_ENCODING_SKIPLIST;
+	return o;
+}
+
 robj *createSetObject(void) {
     dict *d = dictCreate(&setDictType,NULL);
     robj *o = createObject(REDIS_SET,d);
@@ -244,6 +252,9 @@ void freeListObject(robj *o) {
     case REDIS_ENCODING_QUICKLIST:
         quicklistRelease(o->ptr);
         break;
+    case REDIS_ENCODING_SKIPLIST:
+    	slFree((skiplist*)o->ptr);
+    	break;
     default:
         redisPanic("Unknown list encoding type");
     }
