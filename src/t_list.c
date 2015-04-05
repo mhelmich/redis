@@ -74,10 +74,6 @@ robj *listTypePop(robj *subject, int where) {
 unsigned long listTypeLength(robj *subject) {
     if (subject->encoding == REDIS_ENCODING_QUICKLIST) {
         return quicklistCount(subject->ptr);
-    } else if (subject->encoding == REDIS_ENCODING_ZIPLIST) {
-        return ziplistLen(subject->ptr);
-    } else if (subject->encoding == REDIS_ENCODING_LINKEDLIST) {
-        return listLength((list*)subject->ptr);
     } else if (subject->encoding == REDIS_ENCODING_SKIPLIST) {
         skiplist *sl = subject->ptr;
         return sl->length;

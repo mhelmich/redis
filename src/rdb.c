@@ -503,10 +503,6 @@ int rdbSaveObjectType(rio *rdb, robj *o) {
     case REDIS_LIST:
         if (o->encoding == REDIS_ENCODING_QUICKLIST)
             return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST_QUICKLIST);
-        else if (o->encoding == REDIS_ENCODING_ZIPLIST)
-            return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST_ZIPLIST);
-        else if (o->encoding == REDIS_ENCODING_LINKEDLIST)
-            return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST);
         else if (o->encoding == REDIS_ENCODING_SKIPLIST)
         	return rdbSaveType(rdb,REDIS_RDB_TYPE_LIST_SKIPLIST);
         else

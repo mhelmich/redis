@@ -390,10 +390,6 @@ slNode *slRangeHighEnd(skiplist *sl, slrangespec *range) {
     return largest;
 }
 
-/**
- * TODO
- * clean this mess up!!!
- */
 slNode *slInsert(skiplist *sl, robj *score, robj *obj) {
     slNode *update[SKIPLIST_MAXLEVEL], *x;
     int i, level;
