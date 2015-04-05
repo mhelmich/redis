@@ -575,15 +575,6 @@ ssize_t rdbSaveObject(rio *rdb, robj *o) {
                     nwritten += n;
                 }
             } while ((node = node->next));
-//            if ((n = rdbSaveLen(rdb,listLength(list))) == -1) return -1;
-//            nwritten += n;
-//
-//            listRewind(list,&li);
-//            while((ln = listNext(&li))) {
-//                robj *eleobj = listNodeValue(ln);
-//                if ((n = rdbSaveStringObject(rdb,eleobj)) == -1) return -1;
-//                nwritten += n;
-//            }
         } else if (o->encoding == REDIS_ENCODING_SKIPLIST) {
             skiplist *sl = o->ptr;
             slNode *x = sl->header->level[0].forward;
